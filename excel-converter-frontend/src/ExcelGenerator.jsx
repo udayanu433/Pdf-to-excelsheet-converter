@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './ExcelGenerator.css'; // Import the new styles
 
-const BACKEND_URL = 'http://localhost:8000/generate-excel/';
+const BACKEND_URL = 'https://pdf-to-excelsheet-converter-api.onrender.com/';
 
 export default function ExcelGenerator() {
   const [file, setFile] = useState(null);
