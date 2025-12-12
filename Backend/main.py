@@ -9,11 +9,7 @@ import pdfplumber # NEW: Handles the binary PDF reading
 app = FastAPI()
 
 # --- 1. CONFIGURATION ---
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8000",
-]
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
