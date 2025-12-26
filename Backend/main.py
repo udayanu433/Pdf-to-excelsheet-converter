@@ -12,18 +12,23 @@ app = FastAPI()
 # --- 1. CONFIGURATION ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # Defined only once now:
+    allow_origins=[
+        "http://localhost:5173", 
+        "https://pdf-to-excelsheet-converter.vercel.app",
+        "*" # You can keep "*" here if you want to allow all while testing
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Grade point mapping for 2024 scheme [cite: 120, 140-145]
+# Grade point mapping for 2024 scheme
 GRADE_POINTS = {
     'S': 10, 'A+': 9, 'A': 8.5, 'B+': 8, 'B': 7.5, 'C+': 7, 'C': 6.5, 'D': 6, 
     'P': 5.5, 'PASS': 5.5, 'F': 0, 'FE': 0, 'I': 0, 'ABSENT': 0, 'WITHHELD': 0
 }
 
-# Strictly requested fixed denominators per semester [cite: 35, 114, 217, 316, 410]
+# Strictly requested fixed denominators per semester
 SEMESTER_TOTAL_CREDITS = {
     "S1": 20, "S2": 24, "S3": 25, "S4": 24, "S5": 23, "S6": 23, "S7": 17, "S8": 11
 }
@@ -38,7 +43,7 @@ def pdf_to_raw_json(content):
         for page in pdf.pages:
             full_text += (page.extract_text() or "") + "\n"
 
-    # Match KTU Register Numbers [cite: 16]
+    # Match KTU Register Numbers
     reg_iter = list(re.finditer(r'(PKD\d{2}([A-Z]{2})\d{3})', full_text))
 
     for i in range(len(reg_iter)):
@@ -49,7 +54,7 @@ def pdf_to_raw_json(content):
         end_pos = reg_iter[i+1].start() if i+1 < len(reg_iter) else len(full_text)
         block = full_text[start_pos:end_pos].replace('\n', ' ')
 
-        # Extract Course(Grade) pairs [cite: 28, 33]
+        # Extract Course(Grade) pairs
         pairs = re.findall(r"([A-Z]{3,}\d{3})\s*\(([^)]+)\)", block)
         grades = {code: grade.strip().upper() for code, grade in pairs}
         
@@ -68,15 +73,12 @@ def calculate_modular_data(student_grades, semester_key, credit_lookup):
     official_denominator = SEMESTER_TOTAL_CREDITS.get(semester_key, 24)
     
     # 1. Start with the mandatory UCSEM129 logic for S2 
-    # This ensures every S2 student gets this credit even if it's missing from PDF text
     if semester_key == "S2":
-        # Automatically add 1 credit and 'PASS' grade points (5.5) 
         total_weighted_points += (1 * 5.5)
         total_creds_obtained += 1
     
     # 2. Add points from all other subjects found in the PDF
     for code, grade in student_grades.items():
-        # Skip UCSEM129 if found in text to avoid double counting
         if code == "UCSEM129":
             continue
             
@@ -92,7 +94,7 @@ def calculate_modular_data(student_grades, semester_key, credit_lookup):
         if creds > 0:
             gp = GRADE_POINTS.get(grade, 0)
             total_weighted_points += (creds * gp)
-            if gp > 0: # Only count obtained credit if student passed [cite: 120]
+            if gp > 0: 
                 total_creds_obtained += creds
             
     sgpa = round(total_weighted_points / official_denominator, 2) if official_denominator > 0 else 0.0
@@ -118,7 +120,6 @@ async def generate_excel(file: UploadFile = File(...), semester: str = Form(...)
             if dept not in dept_buckets:
                 dept_buckets[dept] = []
             
-            # Calculate modular data (SGPA and Total Credits)
             sgpa, creds_obtained = calculate_modular_data(s["grades"], semester, credit_lookup)
             s["sgpa"] = sgpa
             s["total_credits"] = creds_obtained
@@ -140,7 +141,6 @@ async def generate_excel(file: UploadFile = File(...), semester: str = Form(...)
                 
                 df = pd.DataFrame(rows)
                 
-                # Failed Count Summary [cite: 140-145]
                 summary_row = {"Register No": "FAILED COUNT"}
                 for course in dept_courses:
                     summary_row[course] = df[course].isin(['F', 'FE']).sum()
