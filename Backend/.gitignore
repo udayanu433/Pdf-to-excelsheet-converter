@@ -1,4 +1,17 @@
+# Python environment
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.venv/
+env/
 venv/
-.env
+ENV/
+
+# Data & Output Files (Prevents uploading local results)
+extracted_results.json
+*.xlsx
+*.csv
+
+# OS specific
+.DS_Store
+Thumbs.db

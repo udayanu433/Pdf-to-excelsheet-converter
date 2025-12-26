@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import './ExcelGenerator.css'; // Import the new styles
+import { useParams, useNavigate } from 'react-router-dom';
+import './ExcelGenerator.css'; 
 
-const BACKEND_URL = 'https://pdf-to-excelsheet-converter-api.onrender.com/generate-excel/';
+// Replace this with your actual Render/Backend URL
+const BACKEND_URL = 'http://localhost:8000/generate-excel/';
 
 export default function ExcelGenerator() {
+  const { year, semester } = useParams(); // Retrieves scheme (2019/2024) and semester (S1-S8)
+  const navigate = useNavigate();
+  
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState('');
-  const [statusType, setStatusType] = useState(''); // 'success', 'error', or 'loading'
+  const [statusType, setStatusType] = useState(''); 
   const [isLoading, setIsLoading] = useState(false);
 
   const handleFileChange = (event) => {
@@ -14,7 +19,7 @@ export default function ExcelGenerator() {
     if (selectedFile) {
       if (selectedFile.type === 'application/pdf' || selectedFile.name.endsWith('.txt')) {
         setFile(selectedFile);
-        setMessage(''); // Clear previous messages
+        setMessage(''); 
         setStatusType('');
       } else {
         setFile(null);
@@ -32,11 +37,15 @@ export default function ExcelGenerator() {
     }
 
     setIsLoading(true);
-    setMessage('Processing file... This may take a moment.');
+    setMessage(`Processing ${semester} (${year} Scheme)...`);
     setStatusType('loading');
 
     const formData = new FormData();
     formData.append('file', file);
+    
+    // Sending the scheme and semester as additional form data
+    formData.append('scheme', year);
+    formData.append('semester', semester);
 
     try {
       const response = await fetch(BACKEND_URL, {
@@ -46,7 +55,8 @@ export default function ExcelGenerator() {
 
       if (response.ok) {
         const blob = await response.blob();
-        let filename = 'converted_result.xlsx';
+        let filename = `${year}_${semester}_Results.xlsx`;
+        
         const contentDisposition = response.headers.get('Content-Disposition');
         if (contentDisposition) {
           const match = contentDisposition.match(/filename="?(.+)"?/);
@@ -62,7 +72,7 @@ export default function ExcelGenerator() {
         a.remove();
         window.URL.revokeObjectURL(url);
 
-        setMessage(`✅ Success! Downloaded: ${filename}`);
+        setMessage(`✅ Success! Excel downloaded for ${semester}.`);
         setStatusType('success');
       } else {
         let errorMsg = `Server Error (${response.status})`;
@@ -83,8 +93,16 @@ export default function ExcelGenerator() {
 
   return (
     <div className="converter-card">
-      <h2>📄 PDF to Excel</h2>
-      <p>Convert your semester results instantly.</p>
+      <button 
+        onClick={() => navigate(-1)} 
+        style={{ float: 'left', border: 'none', background: 'none', cursor: 'pointer', color: '#3498db' }}
+      >
+        ← Back
+      </button>
+      
+      <h2>📄 {semester} Converter</h2>
+      <p style={{ fontWeight: 'bold', color: '#2c3e50' }}>{year} Scheme</p>
+      <p>Upload the result PDF to generate your Excel sheet with SGPA calculation.</p>
 
       <div className="file-upload-wrapper">
         <input 
@@ -120,6 +138,10 @@ export default function ExcelGenerator() {
           {message}
         </div>
       )}
+
+      <div style={{ marginTop: '20px', fontSize: '12px', color: '#7f8c8d', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+        * SGPA calculation is based on the official KTU {year} Curriculum. [cite: 10, 1342]
+      </div>
     </div>
   );
 }
