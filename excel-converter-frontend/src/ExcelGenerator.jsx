@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import './ExcelGenerator.css'; 
 
 // Replace this with your actual Render/Backend URL
-const BACKEND_URL = 'https://pdf-to-excelsheet-converter-api.onrender.com/generate-excel/';
+const BACKEND_URL = 'https://pdf-to-excelsheet-converter.onrender.com/generate-excel/';
 
 export default function ExcelGenerator() {
   const { year, semester } = useParams(); // Retrieves scheme (2019/2024) and semester (S1-S8)
